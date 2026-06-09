@@ -16,7 +16,7 @@ export function CommunitySection() {
           Join the Community
         </AuroraText>
       }
-      subtitle="Contribute brilliant ideas to shape the future of DeerFlow. Collaborate, innovate, and make impacts."
+      subtitle="Contribute crawler profiles, risk rules, and analysis ideas to shape the future of GrayHunt."
     >
       <div className="flex justify-center">
         <Button className="text-xl" size="lg" asChild>

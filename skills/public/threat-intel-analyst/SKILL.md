@@ -89,6 +89,23 @@ python /mnt/skills/public/threat-intel-analyst/scripts/analyze.py --action repor
 报告基于真实 SQL 聚合（不编数据），含风险概览/重点群/实体线索/趋势研判/处置建议，
 落 `output/reports/intel_report_<scope>_<时间戳>.md`，并在 stdout 输出全文。
 
+### Step 4: 生成可视化 HTML 页面（GrayHunt 前端展示）
+
+用底层 `tg-crawler report-html` 命令生成交互式可视化页面（按来源群组聚合、风险/类别/平台/来源四维筛选、群链接可点、图片缩略图、图中信息OCR展示）：
+
+```bash
+cd <tg-intel-crawler 项目根> && export TG_INTEL_CRAWLER_HOME=$(pwd)
+# 基础：生成到 output/reports/intel.html
+tg-crawler report-html
+# 合并多个情报库（如另一个项目的库）
+tg-crawler report-html --extra-db /abs/path/to/another/intel.db
+# 离线自包含（图片内嵌 base64，适合做项目首页静态展示）
+tg-crawler report-html --embed-images --output /abs/path/grayhunt.html
+```
+
+页面特性：Twitter/Telegram/@JISOU 三来源平台标注、私密群🔒标识、正文/实体内 URL 自动转可点击蓝链。
+**注意**：本地 LocalSandbox 用真实绝对路径，不要用 `/mnt/...`。
+
 ### 把库当知识库：自由 SQL 查询（agent 自己写 SELECT）
 
 当预设聚合不够用时，agent 可以**直接写只读 SQL** 查整个情报库。库暴露两个逻辑视图：

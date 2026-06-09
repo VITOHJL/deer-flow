@@ -1,8 +1,13 @@
 "use client";
 
-import { BotIcon, MessageSquareIcon, Trash2Icon } from "lucide-react";
+import {
+  BotIcon,
+  MessageSquareIcon,
+  SettingsIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { type ComponentProps, type ReactElement, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -23,81 +28,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useDeleteAgent } from "@/core/agents";
 import type { Agent } from "@/core/agents";
 import { useI18n } from "@/core/i18n/hooks";
-import { cn } from "@/lib/utils";
 
 interface AgentCardProps {
   agent: Agent;
-}
-
-/**
- * Reveals the full text in a tooltip ONLY when its trigger is actually clipped.
- * Clipping is measured on pointer enter against the trigger's own box, covering
- * both single-line `truncate` (width) and multi-line `line-clamp` (height), so
- * untruncated content never pops a redundant tooltip.
- */
-function TruncatedTooltip({
-  text,
-  children,
-}: {
-  text: string;
-  children: ReactElement;
-}) {
-  const [truncated, setTruncated] = useState(false);
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        asChild
-        onPointerEnter={(e) => {
-          const el = e.currentTarget;
-          setTruncated(
-            el.scrollWidth > el.clientWidth ||
-              el.scrollHeight > el.clientHeight,
-          );
-        }}
-      >
-        {children}
-      </TooltipTrigger>
-      {truncated && (
-        <TooltipContent className="max-w-xs text-wrap break-words">
-          {text}
-        </TooltipContent>
-      )}
-    </Tooltip>
-  );
-}
-
-/**
- * Long, user-controlled labels (agent model, skills, tool groups) that must
- * never break the card layout: width is capped to the parent and the text is
- * truncated with an ellipsis, with the full value revealed on hover.
- */
-function TruncatedBadge({
-  label,
-  variant,
-  className,
-}: {
-  label: string;
-  variant: ComponentProps<typeof Badge>["variant"];
-  className?: string;
-}) {
-  return (
-    <TruncatedTooltip text={label}>
-      <Badge
-        variant={variant}
-        className={cn("block max-w-full truncate", className)}
-      >
-        {label}
-      </Badge>
-    </TruncatedTooltip>
-  );
 }
 
 export function AgentCard({ agent }: AgentCardProps) {
@@ -105,6 +41,7 @@ export function AgentCard({ agent }: AgentCardProps) {
   const router = useRouter();
   const deleteAgent = useDeleteAgent();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
 
   function handleChat() {
     router.push(`/workspace/agents/${agent.name}/chats/new`);
@@ -124,33 +61,27 @@ export function AgentCard({ agent }: AgentCardProps) {
     <>
       <Card className="group flex flex-col transition-shadow hover:shadow-md">
         <CardHeader className="pb-3">
-          <div className="flex min-w-0 items-start justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2">
               <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
                 <BotIcon className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <TruncatedTooltip text={agent.name}>
-                  <CardTitle className="truncate text-base">
-                    {agent.name}
-                  </CardTitle>
-                </TruncatedTooltip>
+                <CardTitle className="truncate text-base">
+                  {agent.name}
+                </CardTitle>
                 {agent.model && (
-                  <TruncatedBadge
-                    label={agent.model}
-                    variant="secondary"
-                    className="mt-0.5 text-xs"
-                  />
+                  <Badge variant="secondary" className="mt-0.5 text-xs">
+                    {agent.model}
+                  </Badge>
                 )}
               </div>
             </div>
           </div>
           {agent.description && (
-            <TruncatedTooltip text={agent.description}>
-              <CardDescription className="mt-2 line-clamp-2 text-sm">
-                {agent.description}
-              </CardDescription>
-            </TruncatedTooltip>
+            <CardDescription className="mt-2 line-clamp-2 text-sm">
+              {agent.description}
+            </CardDescription>
           )}
         </CardHeader>
 
@@ -158,20 +89,22 @@ export function AgentCard({ agent }: AgentCardProps) {
           <CardContent className="pt-0 pb-3">
             <div className="flex flex-wrap gap-1">
               {agent.tool_groups?.map((group) => (
-                <TruncatedBadge
+                <Badge
                   key={`tg:${group}`}
-                  label={group}
                   variant="outline"
                   className="text-xs"
-                />
+                >
+                  {group}
+                </Badge>
               ))}
               {agent.skills?.map((skill) => (
-                <TruncatedBadge
+                <Badge
                   key={`sk:${skill}`}
-                  label={skill}
                   variant="secondary"
                   className="text-xs"
-                />
+                >
+                  {skill}
+                </Badge>
               ))}
             </div>
           </CardContent>
@@ -186,6 +119,15 @@ export function AgentCard({ agent }: AgentCardProps) {
             <Button
               size="icon"
               variant="ghost"
+              className="h-8 w-8 shrink-0"
+              onClick={() => setConfigOpen(true)}
+              title="查看配置"
+            >
+              <SettingsIcon className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
               className="text-destructive hover:text-destructive h-8 w-8 shrink-0"
               onClick={() => setDeleteOpen(true)}
               title={t.agents.delete}
@@ -195,6 +137,81 @@ export function AgentCard({ agent }: AgentCardProps) {
           </div>
         </CardFooter>
       </Card>
+
+      {/* Config Detail */}
+      <Dialog open={configOpen} onOpenChange={setConfigOpen}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BotIcon className="h-5 w-5" />
+              {agent.name}
+            </DialogTitle>
+            {agent.description && (
+              <DialogDescription>{agent.description}</DialogDescription>
+            )}
+          </DialogHeader>
+
+          <div className="space-y-4 text-sm">
+            <div>
+              <div className="text-muted-foreground mb-1 font-medium">模型</div>
+              <div>{agent.model ?? "默认模型（继承）"}</div>
+            </div>
+
+            <div>
+              <div className="text-muted-foreground mb-1 font-medium">
+                技能 Skills
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {agent.skills && agent.skills.length > 0 ? (
+                  agent.skills.map((s) => (
+                    <Badge key={s} variant="secondary" className="text-xs">
+                      {s}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-muted-foreground">全部（继承）</span>
+                )}
+              </div>
+            </div>
+
+            {agent.tool_groups && agent.tool_groups.length > 0 && (
+              <div>
+                <div className="text-muted-foreground mb-1 font-medium">
+                  工具组 Tool Groups
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {agent.tool_groups.map((g) => (
+                    <Badge key={g} variant="outline" className="text-xs">
+                      {g}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {agent.soul && (
+              <div>
+                <div className="text-muted-foreground mb-1 font-medium">
+                  人设与工作流 SOUL.md
+                </div>
+                <pre className="bg-muted max-h-[40vh] overflow-auto rounded-md p-3 text-xs whitespace-pre-wrap">
+                  {agent.soul}
+                </pre>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfigOpen(false)}>
+              {t.common.close ?? "关闭"}
+            </Button>
+            <Button onClick={handleChat}>
+              <MessageSquareIcon className="mr-1.5 h-3.5 w-3.5" />
+              {t.agents.chat}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirm */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>

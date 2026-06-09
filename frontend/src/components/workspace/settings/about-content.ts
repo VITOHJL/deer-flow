@@ -1,50 +1,42 @@
 /**
- * About DeerFlow markdown content. Inlined to avoid raw-loader dependency
+ * About GrayHunt markdown content. Inlined to avoid raw-loader dependency
  * (Turbopack cannot resolve raw-loader for .md imports).
  */
-export const aboutMarkdown = `# 🦌 [About DeerFlow 2.0](https://github.com/bytedance/deer-flow)
+export const aboutMarkdown = `# About GrayHunt
 
-> **From Open Source, Back to Open Source**
+> **Crawler-driven intelligence for black and gray market risk.**
 
-DeerFlow (**D**eep **E**xploration and **E**fficient **R**esearch **Flow**) is an open-source **super agent harness** that orchestrates **sub-agents**, **memory**, and **sandboxes** to do almost anything — powered by **extensible skills**.
-
----
-
-## 🚀 Core Features
-
-* **Skills & Tools**: With built-in and extensible skills and tools, DeerFlow can do almost anything.
-* **Sub-Agents**: Sub-Agents help the main agent to do the tasks that are too complex to be done by the main agent.
-* **Sandbox & File System**: Safely execute code and manipulate files in the sandbox.
-* **Context Engineering**: Isolated sub-agent context, summarization to keep the context window sharp.
-* **Long-Term Memory**: Keep recording the user's profile, top of mind, and conversation history.
+GrayHunt is an intelligence agent that crawls major platforms, collects black/gray market signals, extracts risky entities, and produces structured analysis reports.
 
 ---
 
-## 🌟 GitHub Repository
+## Core Features
 
-![Star History Chart](https://api.star-history.com/svg?repos=bytedance/deer-flow&type=Date)
-
-Explore DeerFlow on GitHub: [github.com/bytedance/deer-flow](https://github.com/bytedance/deer-flow)
-
-## 🌐 Official Website
-
-Visit the official website of DeerFlow: [deerflow.tech](https://deerflow.tech/)
-
-## 📧 Support
-
-If you have any questions or need help, please contact us at [support@deerflow.tech](mailto:support@deerflow.tech).
+* **Crawler Skills**: Add platform-specific collectors for forums, social platforms, channels, and other OSINT sources.
+* **Entity Extraction**: Pull out accounts, phone numbers, domains, handles, invite links, prices, and tool names.
+* **Risk Analysis**: Cluster samples by risk type, source, entity, time, and campaign pattern.
+* **Evidence Workspace**: Store raw samples, filtered entities, SQLite evidence tables, and generated reports.
+* **Long-Running Runtime**: Run crawlers and analyzers in an isolated workspace for durable intelligence jobs.
 
 ---
 
-## 📜 License
+## Intelligence Workflow
 
-DeerFlow is proudly open source and distributed under the **MIT License**.
+1. Seed collection targets and platform keywords.
+2. Crawl source posts, channels, profiles, and linked resources.
+3. Normalize raw samples and extract entities.
+4. Score black/gray market indicators and cluster related evidence.
+5. Generate a report with trends, top entities, high-risk groups, and recommended follow-up.
+
+## License
+
+GrayHunt is distributed under the **MIT License**.
 
 ---
 
-## 🙌 Acknowledgments
+## Acknowledgments
 
-We extend our heartfelt gratitude to the open source projects and contributors who have made DeerFlow a reality. We truly stand on the shoulders of giants.
+GrayHunt builds on open-source agent, frontend, and sandbox infrastructure.
 
 ### Core Frameworks
 - **[LangChain](https://github.com/langchain-ai/langchain)**: A phenomenal framework that powers our LLM interactions and chains.
@@ -54,14 +46,4 @@ We extend our heartfelt gratitude to the open source projects and contributors w
 ### UI Libraries
 - **[Shadcn](https://ui.shadcn.com/)**: Minimalistic components that power our UI.
 - **[SToneX](https://github.com/stonexer)**: For his invaluable contribution to token-by-token visual effects.
-
-These outstanding projects form the backbone of DeerFlow and exemplify the transformative power of open source collaboration.
-
-### Special Thanks
-Finally, we want to express our heartfelt gratitude to the core authors of DeerFlow 1.0 and 2.0:
-
-- **[Daniel Walnut](https://github.com/hetaoBackend/)**
-- **[Henry Li](https://github.com/magiccube/)**
-
-Without their vision, passion and dedication, \`DeerFlow\` would not be what it is today.
 `;

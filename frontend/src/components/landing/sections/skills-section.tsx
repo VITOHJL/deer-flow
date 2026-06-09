@@ -9,14 +9,14 @@ export function SkillsSection({ className }: { className?: string }) {
   return (
     <Section
       className={cn("h-[calc(100vh-64px)] w-full bg-white/2", className)}
-      title="Agent Skills"
+      title="GrayHunt Intelligence Flow"
       subtitle={
         <div>
-          Agent Skills are loaded progressively — only what&apos;s needed, when
-          it&apos;s needed.
+          GrayHunt loads the right crawler and analysis skills as the case
+          unfolds — from platform discovery to evidence collection.
           <br />
-          Extend DeerFlow with your own skill files, or use our built-in
-          library.
+          Raw posts, accounts, domains, and invite links become structured
+          black/gray market intelligence reports.
         </div>
       }
     >
