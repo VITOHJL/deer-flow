@@ -125,6 +125,9 @@ class SQLiteStore:
                 summary         TEXT,
                 llm_model       TEXT,
                 source_url      TEXT,
+                source_group_url TEXT DEFAULT '',
+                media_urls      TEXT DEFAULT '',
+                media_ocr_text  TEXT DEFAULT '',
                 suffix          TEXT DEFAULT '',
                 inserted_at     TEXT NOT NULL,
                 PRIMARY KEY (day, id)
@@ -143,7 +146,20 @@ class SQLiteStore:
             f"CREATE INDEX IF NOT EXISTS idx_{self._filtered_table}_platform "
             f"ON {self._filtered_table}(source_platform)"
         )
+        self._ensure_filtered_column("source_group_url", "TEXT DEFAULT ''")
+        self._ensure_filtered_column("media_urls", "TEXT DEFAULT ''")
+        self._ensure_filtered_column("media_ocr_text", "TEXT DEFAULT ''")
         self._conn.commit()
+
+    def _ensure_filtered_column(self, column: str, ddl_type: str) -> None:
+        """Add a column to the filtered table if an existing DB lacks it (online migration)."""
+        cur = self._conn.cursor()
+        cur.execute(f"PRAGMA table_info({self._filtered_table})")
+        existing = {row[1] for row in cur.fetchall()}
+        if column not in existing:
+            cur.execute(
+                f"ALTER TABLE {self._filtered_table} ADD COLUMN {column} {ddl_type}"
+            )
 
     def _table_exists(self, name: str) -> bool:
         cur = self._conn.cursor()
@@ -250,6 +266,9 @@ class SQLiteStore:
             entities = r.get("entities")
             if not isinstance(entities, str):
                 entities = json.dumps(entities or {}, ensure_ascii=False)
+            media_urls = r.get("media_urls")
+            if not isinstance(media_urls, str):
+                media_urls = json.dumps(media_urls or [], ensure_ascii=False)
             rows.append((
                 day,
                 r.get("id", ""),
@@ -266,6 +285,9 @@ class SQLiteStore:
                 r.get("summary", ""),
                 r.get("llm_model", ""),
                 r.get("source_url", ""),
+                r.get("source_group_url", ""),
+                media_urls,
+                r.get("media_ocr_text", ""),
                 suffix,
                 now,
             ))
@@ -277,8 +299,9 @@ class SQLiteStore:
                 (day, id, source_platform, source_group, msg_date,
                  sender_id, sender_name, sender_username, original_text,
                  risk_type, risk_level, entities, summary, llm_model,
-                 source_url, suffix, inserted_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 source_url, source_group_url, media_urls, media_ocr_text,
+                 suffix, inserted_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             rows,
         )

@@ -120,3 +120,91 @@ class LLMFilter:
             results = await self.analyze_batch(batch)
             all_results.extend(results)
         return all_results
+
+    # ------------------------------------------------------------------
+    # 多模态：从图片/视频封面提取黑灰产引流信息（OCR + 视觉理解）
+    # ------------------------------------------------------------------
+
+    VISION_PROMPT = (
+        "你是黑灰产情报分析专家。请仔细识别这张图片中的所有信息，"
+        "黑灰产广告常把关键引流信息印在图片上。请提取并以中文输出：\n"
+        "1. 图中所有文字（OCR），尤其是：微信号/QQ/Telegram(飞机/纸飞机)账号、"
+        "手机号、网址/域名、价目表、平台名、工作室/团队名、二维码旁的说明文字；\n"
+        "2. 若有二维码，说明它是什么平台的（微信/Telegram/支付等）；\n"
+        "3. 图中出现的 App/平台 logo（如抖音/TikTok/微信/小红书/快手/Telegram 等）。\n"
+        "只输出图中实际可见的信息，简洁罗列，不要编造。若图片无有效信息，回复『无』。"
+    )
+
+    async def extract_from_image(self, image_url: str) -> str:
+        """对单张图片做视觉提取，返回图中文字/账号/二维码等信息的中文描述。
+
+        先本地下载图片转 base64 data URI 再传给模型——避免模型服务端
+        （火山方舟）去访问 pbs.twimg.com 等境外图床时连接被重置/超时。
+        失败返回空串。
+        """
+        if not image_url:
+            return ""
+        payload_url = await self._to_data_uri(image_url)
+        if not payload_url:
+            return ""
+        try:
+            response = await self._client.chat.completions.create(
+                model=self._model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": self.VISION_PROMPT},
+                            {"type": "image_url", "image_url": {"url": payload_url}},
+                        ],
+                    }
+                ],
+                temperature=0.1,
+            )
+            text = (response.choices[0].message.content or "").strip()
+            if text in ("无", "无。", ""):
+                return ""
+            return text
+        except Exception as e:
+            logger.warning(f"Vision extract failed for {image_url}: {e}")
+            return ""
+
+    @staticmethod
+    async def _to_data_uri(image_url: str) -> str:
+        """下载图片并转成 base64 data URI；失败返回空串。
+
+        短超时（8s）避免个别慢图拖垮整批；超过 ~6MB 的图跳过（base64 后过大）。
+        """
+        import base64
+
+        import httpx
+
+        try:
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(8.0, connect=5.0), follow_redirects=True
+            ) as c:
+                resp = await c.get(image_url)
+                resp.raise_for_status()
+                content = resp.content
+                if len(content) > 6 * 1024 * 1024:
+                    logger.warning(f"Image too large, skip: {image_url} ({len(content)} bytes)")
+                    return ""
+                ctype = resp.headers.get("content-type", "image/jpeg").split(";")[0]
+                if not ctype.startswith("image/"):
+                    ctype = "image/jpeg"
+                b64 = base64.b64encode(content).decode("ascii")
+                return f"data:{ctype};base64,{b64}"
+        except Exception as e:
+            logger.warning(f"Image download failed for {image_url}: {e}")
+            return ""
+
+    async def extract_from_images(self, image_urls: list[str], *, max_images: int = 2) -> str:
+        """对一条推文的多张图片做视觉提取并汇总（限制张数控制成本）。"""
+        if not image_urls:
+            return ""
+        parts: list[str] = []
+        for url in image_urls[:max_images]:
+            txt = await self.extract_from_image(url)
+            if txt:
+                parts.append(txt)
+        return "\n".join(parts)
