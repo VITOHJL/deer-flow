@@ -403,6 +403,32 @@ class SubagentExecutor:
 
         return messages
 
+    def _build_subagent_working_directory(self) -> str:
+        """Sandbox-aware working-directory text for the subagent prompt.
+
+        LocalSandboxProvider → real host paths (no /mnt); otherwise the
+        container /mnt/user-data layout. Falls back to the container layout
+        on any error so the subagent always has a valid section.
+        """
+        container_default = (
+            "You have access to the same sandbox environment as the parent agent:\n"
+            "- User uploads: `/mnt/user-data/uploads`\n"
+            "- User workspace: `/mnt/user-data/workspace`\n"
+            "- Output files: `/mnt/user-data/outputs`\n"
+            "- Treat `/mnt/user-data/workspace` as the default working directory."
+        )
+        try:
+            from deerflow.agents.lead_agent.prompt import (
+                _build_working_directory_section,
+                _is_local_sandbox,
+            )
+
+            if _is_local_sandbox(self.app_config):
+                return _build_working_directory_section(app_config=self.app_config)
+            return container_default
+        except Exception:
+            return container_default
+
     async def _build_initial_state(self, task: str) -> tuple[dict[str, Any], list[BaseTool]]:
         """Build the initial state for agent execution.
 
@@ -423,7 +449,17 @@ class SubagentExecutor:
         # "System message must be at the beginning."
         system_parts: list[str] = []
         if self.config.system_prompt:
-            system_parts.append(self.config.system_prompt)
+            prompt = self.config.system_prompt
+            # Builtin subagent prompts contain a {{WORKING_DIRECTORY}} placeholder.
+            # Fill it with a sandbox-aware section: under LocalSandboxProvider the
+            # agent runs on the host (no /mnt), so it must use real absolute paths;
+            # otherwise fall back to the container /mnt/user-data layout. This keeps
+            # subagents consistent with the lead agent and stops them from refusing
+            # host paths or asking the user to "upload to /mnt".
+            if "{{WORKING_DIRECTORY}}" in prompt:
+                wd = self._build_subagent_working_directory()
+                prompt = prompt.replace("{{WORKING_DIRECTORY}}", wd)
+            system_parts.append(prompt)
         for skill_msg in skill_messages:
             system_parts.append(skill_msg.content)
 

@@ -273,11 +273,7 @@
       <p>多条消息<b>合并一次调用</b>（batch_size=15），N 条只算 1 次请求，调用次数降一个量级。</p>
     </div>
     <div class="card">
-      <h3>③ 轻量模型</h3>
-      <p>主模型用 <b>Doubao-Seed-2.0-Lite</b> 等轻量级，单价远低于旗舰；研判/标题/摘要可分别配更省的模型。</p>
-    </div>
-    <div class="card">
-      <h3>④ 多模态按需 + 缓存去重</h3>
+      <h3>③ 多模态按需 + 缓存去重</h3>
       <p>视觉提取（<code>--vision</code>）可关；落库 <b>(day,id) 去重</b>不重复研判；原始归档复用，规则变了不必重爬。</p>
     </div>
   </div>
@@ -295,7 +291,7 @@
   </table>
   <p class="sub" style="margin-top:20px">
     若把 2,795 条全量喂给 LLM 逐条研判 ≈ 2,795 次调用；GrayHunt 经关键词预筛后仅 <b>2 条</b>进 LLM，<b class="save">直接省掉 99.9% 的 LLM 开销</b>。
-    叠加批量调用与轻量模型，单次完整作业的 LLM 成本降到原始方案的<b class="save"> 个位数百分比</b>。
+    叠加批量调用，单次完整作业的 LLM 成本降到原始方案的<b class="save"> 个位数百分比</b>。
   </p>
 </section>
 

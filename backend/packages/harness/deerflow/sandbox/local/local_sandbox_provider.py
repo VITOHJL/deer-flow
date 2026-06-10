@@ -183,6 +183,18 @@ class LocalSandboxProvider(SandboxProvider):
         user_id = get_effective_user_id()
         paths.ensure_thread_dirs(thread_id, user_id=user_id)
 
+        # 把 agent 习惯的 /mnt/user-data/workspace 直接映射到真实项目根目录，
+        # 而不是线程级的空临时目录。这样 agent 用
+        # /mnt/user-data/workspace/tg-intel-crawler/output/intel.db 这类路径
+        # 就能直接命中真实项目文件，从根本上消除"沙箱里找不到/访问受限"的误判
+        # （且映射目标即项目根，子路径不会触发逃逸检查）。
+        try:
+            from deerflow.config.runtime_paths import project_root as _project_root
+
+            workspace_local = str(_project_root())
+        except Exception:
+            workspace_local = str(paths.sandbox_work_dir(thread_id, user_id=user_id))
+
         return [
             # Aggregate parent mapping so ``ls /mnt/user-data`` and other
             # parent-level operations behave the same as inside AIO (where the
@@ -196,7 +208,7 @@ class LocalSandboxProvider(SandboxProvider):
             ),
             PathMapping(
                 container_path=f"{_USER_DATA_VIRTUAL_PREFIX}/workspace",
-                local_path=str(paths.sandbox_work_dir(thread_id, user_id=user_id)),
+                local_path=workspace_local,
                 read_only=False,
             ),
             PathMapping(
