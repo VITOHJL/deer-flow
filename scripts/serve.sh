@@ -183,8 +183,8 @@ stop_all() {
     sleep 1
     _kill_repo_nginx
     # Force-kill any survivors still holding the service ports
-    _kill_repo_port 8001
-    _kill_repo_port 3000
+    _kill_repo_port 28001
+    _kill_repo_port 23000
     ./scripts/cleanup-containers.sh deer-flow-sandbox 2>/dev/null || true
     echo "✓ All services stopped"
 }
@@ -310,9 +310,9 @@ echo ""
 echo "  Mode: $MODE_LABEL"
 echo ""
 echo "  Services:"
-echo "    Gateway     → localhost:8001  (REST API + agent runtime)"
-echo "    Frontend    → localhost:3000  (Next.js)"
-echo "    Nginx       → localhost:2026  (reverse proxy)"
+echo "    Gateway     → localhost:28001  (REST API + agent runtime)"
+echo "    Frontend    → localhost:23000  (Next.js)"
+echo "    Nginx       → localhost:22026  (reverse proxy)"
 echo ""
 
 # ── Cleanup handler ──────────────────────────────────────────────────────────
@@ -364,18 +364,18 @@ mkdir -p temp/client_body_temp temp/proxy_temp temp/fastcgi_temp temp/uwsgi_temp
 
 # 1. Gateway API
 run_service "Gateway" \
-    "cd backend && PYTHONPATH=. uv run uvicorn app.gateway.app:app --host 0.0.0.0 --port 8001 $GATEWAY_EXTRA_FLAGS > ../logs/gateway.log 2>&1" \
-    8001 30
+    "cd backend && PYTHONPATH=. uv run uvicorn app.gateway.app:app --host 0.0.0.0 --port 28001 $GATEWAY_EXTRA_FLAGS > ../logs/gateway.log 2>&1" \
+    28001 30
 
 # 2. Frontend
 run_service "Frontend" \
-    "cd frontend && $FRONTEND_CMD > ../logs/frontend.log 2>&1" \
-    3000 120
+    "cd frontend && PORT=23000 $FRONTEND_CMD > ../logs/frontend.log 2>&1" \
+    23000 120
 
 # 3. Nginx
 run_service "Nginx" \
     "nginx -g 'daemon off;' -c '$REPO_ROOT/docker/nginx/nginx.local.conf' -p '$REPO_ROOT' > logs/nginx.log 2>&1" \
-    2026 10
+    22026 10
 
 # ── Ready ────────────────────────────────────────────────────────────────────
 
@@ -384,11 +384,11 @@ echo "=========================================="
 echo "  ✓ DeerFlow is running!  [$MODE_LABEL]"
 echo "=========================================="
 echo ""
-echo "  🌐 http://localhost:2026"
+echo "  🌐 http://localhost:22026"
 echo ""
 echo "  Routing: Frontend → Nginx → Gateway"
 echo "  API:     /api/langgraph/*  →  Gateway agent runtime"
-echo "           /api/*              →  Gateway REST API (8001)"
+echo "           /api/*              →  Gateway REST API (28001)"
 echo ""
 echo "  📋 Logs: logs/{gateway,frontend,nginx}.log"
 echo ""
