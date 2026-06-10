@@ -7,11 +7,15 @@ import {
 } from "react";
 
 import { useSidebar } from "@/components/ui/sidebar";
+import {
+  isPresentableArtifactFilepath,
+  normalizeArtifactFilepath,
+} from "@/core/artifacts/utils";
 import { env } from "@/env";
 
 export interface ArtifactsContextType {
   artifacts: string[];
-  setArtifacts: (artifacts: string[]) => void;
+  setArtifacts: (artifacts?: unknown) => void;
 
   selectedArtifact: string | null;
   autoSelect: boolean;
@@ -41,9 +45,25 @@ export function ArtifactsProvider({ children }: ArtifactsProviderProps) {
   const [autoOpen, setAutoOpen] = useState(true);
   const { setOpen: setSidebarOpen } = useSidebar();
 
+  const updateArtifacts = useCallback((nextArtifacts?: unknown) => {
+    const artifactList = Array.isArray(nextArtifacts) ? nextArtifacts : [];
+    setArtifacts(
+      artifactList.flatMap((artifact) => {
+        const normalized = normalizeArtifactFilepath(artifact);
+        return normalized && isPresentableArtifactFilepath(normalized)
+          ? [normalized]
+          : [];
+      }),
+    );
+  }, []);
+
   const select = useCallback(
     (artifact: string, autoSelect = false) => {
-      setSelectedArtifact(artifact);
+      const normalized = normalizeArtifactFilepath(artifact);
+      if (!normalized || !isPresentableArtifactFilepath(normalized)) {
+        return;
+      }
+      setSelectedArtifact(normalized);
       if (env.NEXT_PUBLIC_STATIC_WEBSITE_ONLY !== "true") {
         setSidebarOpen(false);
       }
@@ -62,7 +82,7 @@ export function ArtifactsProvider({ children }: ArtifactsProviderProps) {
 
   const value: ArtifactsContextType = {
     artifacts,
-    setArtifacts,
+    setArtifacts: updateArtifacts,
 
     open,
     autoOpen,

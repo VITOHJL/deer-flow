@@ -154,6 +154,14 @@ export interface Translations {
     agentCreated: string;
     startChatting: string;
     backToGallery: string;
+    configureSkills: string;
+    configureSkillsDescription: string;
+    inheritAllSkills: string;
+    customSkills: string;
+    noSkills: string;
+    noSkillsAvailable: string;
+    globallyDisabled: string;
+    saveSkillsSuccess: string;
   };
 
   // Breadcrumb

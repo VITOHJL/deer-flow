@@ -1,5 +1,10 @@
 import type { AIMessage, Message } from "@langchain/langgraph-sdk";
 
+import {
+  isPresentableArtifactFilepath,
+  normalizeArtifactFilepath,
+} from "@/core/artifacts/utils";
+
 interface GenericMessageGroup<T = string> {
   type: T;
   id: string | undefined;
@@ -441,7 +446,12 @@ export function extractPresentFilesFromMessage(message: Message) {
       toolCall.name === "present_files" &&
       Array.isArray(toolCall.args.filepaths)
     ) {
-      files.push(...(toolCall.args.filepaths as string[]));
+      for (const filepath of toolCall.args.filepaths as string[]) {
+        const normalized = normalizeArtifactFilepath(filepath);
+        if (normalized && isPresentableArtifactFilepath(normalized)) {
+          files.push(normalized);
+        }
+      }
     }
   }
   return files;
