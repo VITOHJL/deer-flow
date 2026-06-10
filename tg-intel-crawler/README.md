@@ -2,7 +2,7 @@
 
 > Telegram + Twitter 黑灰产情报爬虫 —— 字节跳动相关风险监控
 
-本项目通过 **Telethon (MTProto)** 爬取 Telegram 频道/群组消息，通过 **tikhub.io** 爬取 Twitter/X 数据，再经过两级过滤（关键词 → LLM 语义分析），输出结构化的情报记录到 JSON / CSV。
+本项目通过 **Telethon (MTProto)** 爬取 Telegram 频道/群组消息，通过 **tikhub.io** 爬取 Twitter/X 数据，再经过三级过滤（关键词 → LLM 语义分析 → 图片多模态视觉提取），输出结构化的情报记录到 SQLite / JSON / CSV。其中**多模态视觉提取**能识别藏在图片里的微信/TG/QQ 账号、域名、价目表、二维码等纯文本搜不到的引流信息。
 
 > ⚠️ **关于敏感信息（请先读这一段再开始）**
 >
@@ -316,7 +316,7 @@ tg-crawler crawl-twitter --users "user1,user2"
 
 ## 数据清洗流程
 
-数据清洗分两级，先做廉价的关键词过滤把数据量降到 LLM 能承受的规模，再让 LLM 做语义判定。
+数据清洗分三级：先做廉价的关键词过滤把数据量降到 LLM 能承受的规模，再让 LLM 做语义判定；对带图/视频封面的内容，额外用多模态 LLM 识别图片里的引流信息。
 
 ### Step 1：关键词过滤 (KeywordFilter)
 
@@ -358,7 +358,7 @@ results = await llm.analyze([msg.text for msg in filtered_messages])
 | `is_relevant` | 是否真的与字节系黑灰产相关                           |
 | `risk_type`   | 账号交易 / 刷量作弊 / 引流诈骗 / 数据泄露 / 工具交易 / 其他 |
 | `risk_level`  | `high` / `medium` / `low`                            |
-| `entities`    | `{accounts, contacts, links, tools, prices}`         |
+| `entities`    | `{accounts, contacts, links, domains, invite_codes, tools, prices}` |
 | `summary`     | 一句话中文摘要                                       |
 
 要点：
@@ -368,6 +368,31 @@ results = await llm.analyze([msg.text for msg in filtered_messages])
 - temperature 设为 0.1，输出更稳定。
 
 > 想换模型？修改 `config.yaml` 的 `llm.base_url / model / api_key` 即可，只要兼容 OpenAI Chat Completions 协议（DeepSeek、通义、Moonshot、OpenAI 本身都行）。
+
+### Step 3：图片视觉提取 (LLM 多模态)
+
+黑灰产为规避文本检测，常把**微信号、Telegram 号、QQ、域名、价目表、二维码**印在图片里——纯文本采集完全拿不到。`crawl-twitter --vision` 会对带图/视频封面的推文，用支持视觉的 LLM 做 OCR + 视觉理解，把图中信息还原成文本。
+
+```python
+from tg_intel_crawler.filter.llm_filter import LLMFilter
+
+vf = LLMFilter(config["llm"])
+# 单图提取图中文字/账号/二维码/价目表
+ocr = await vf.extract_from_image("https://pbs.twimg.com/media/xxx.jpg")
+# 一条推文的多张图汇总（默认最多 2 张，控制成本）
+ocr = await vf.extract_from_images(tweet.media_urls)
+```
+
+实现要点：
+- **本地下载图片转 base64 data URI** 再传模型——避免模型服务端访问境外图床（pbs.twimg.com）时连接被重置/超时。
+- 视觉提示词见 `LLMFilter.VISION_PROMPT`，引导模型只提取图中实际可见的引流信息（账号/域名/价目表/平台 logo/二维码），无信息则返回空。
+- 提取结果与正文**合并后一起送语义研判**，图中的账号也会被抽进 `entities`；同时单独存入 `media_ocr_text` 字段。
+- 单图下载 8s 超时、限 6MB，失败跳过不阻塞整批；CLI 可用 `--no-vision` 关闭（更快、更省 API）。
+- 模型需支持视觉（如火山方舟 Doubao-Seed-2.0-Lite，`supports_vision: true`）。
+
+**实测效果**：能从图片里完整识别出"支付宝白号¥158 / 满月号¥199 / 半年号¥279 / 年号¥439"这类价目表，以及图中印的微信/TG 账号和自助下单域名。
+
+要批量给已采集（未做视觉）的历史数据补全图中信息：从 raw 表取每条的 `media_urls`，对带图记录调 `extract_from_images` 并回填 `media_ocr_text` 即可（支持并发提速）。
 
 ---
 
