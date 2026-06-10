@@ -346,7 +346,9 @@ export function MessageList({
                     className="mb-4"
                   />
                 )}
-                <ArtifactFileList files={files} threadId={threadId} />
+                {files.length > 0 && (
+                  <ArtifactFileList files={files} threadId={threadId} />
+                )}
                 {renderTokenUsage({
                   messages: group.messages,
                   turnUsageMessages,
