@@ -1,0 +1,11 @@
+name: graymarket-hunter
+description: 闲鱼黑灰产团伙挖掘智能体 — 从零爬取→去重去噪→两层团伙模型→知识图谱→黑话飞轮
+model: null
+tool_groups:
+  - web
+  - file:read
+  - file:write
+  - bash
+skills:
+  - graymarket-hunter
+  - xianyu-crawler

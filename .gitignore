@@ -38,6 +38,9 @@ coverage/
 .deer-flow/
 .claude/
 skills/custom/*
+!skills/custom/graymarket-hunter/
+!skills/custom/xianyu-crawler/
+skills/custom/*/scripts/__pycache__/
 logs/
 log/
 debug.log
