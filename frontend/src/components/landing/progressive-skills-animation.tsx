@@ -10,6 +10,8 @@ import {
   Terminal,
   Play,
   Pause,
+  Database,
+  ShieldCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useState, useEffect, useRef } from "react";
@@ -39,12 +41,19 @@ interface FileItem {
   dragging?: boolean;
 }
 
-const searchSteps = [
-  { type: "search", text: "mRNA lipid nanoparticle delivery 2024" },
-  { type: "fetch", text: "nature.com/articles/s41587-024..." },
-  { type: "search", text: "LNP ionizable lipids efficiency" },
-  { type: "fetch", text: "pubs.acs.org/doi/10.1021/..." },
-  { type: "search", text: "targeted mRNA tissue-specific" },
+const crawlSteps = [
+  { type: "seed", text: "Loading platform seeds: XHS, Telegram, forums" },
+  { type: "fetch", text: "Crawling marketplace posts and channel timelines" },
+  { type: "filter", text: "Extracting handles, domains, phones, invite links" },
+  { type: "fetch", text: "Following related accounts across platforms" },
+  { type: "filter", text: "Scoring black/gray market risk patterns" },
+  { type: "filter", text: "Deduplicating evidence by source fingerprint" },
+];
+
+const collectionFiles = [
+  "platform_posts.jsonl",
+  "extracted_entities.json",
+  "risk_evidence.sqlite",
 ];
 
 // Animation duration configuration - adjust the duration for each step here
@@ -198,7 +207,7 @@ export default function ProgressiveSkillsAnimation() {
 
   // Handle search animation
   useEffect(() => {
-    if (phase === "researching" && searchIndex < searchSteps.length) {
+    if (phase === "researching" && searchIndex < crawlSteps.length) {
       const timer = setTimeout(() => {
         setSearchIndex((i) => i + 1);
       }, 350);
@@ -208,7 +217,7 @@ export default function ProgressiveSkillsAnimation() {
 
   // Handle build animation
   useEffect(() => {
-    if (phase === "building" && buildIndex < 3) {
+    if (phase === "building" && buildIndex < collectionFiles.length) {
       const timer = setTimeout(() => {
         setBuildIndex((i) => i + 1);
       }, 600);
@@ -232,7 +241,7 @@ export default function ProgressiveSkillsAnimation() {
   const getFileTree = (): FileItem[] => {
     const base: FileItem[] = [
       {
-        name: "deep-search",
+        name: "threat-intel-collector",
         type: "folder",
         indent: 0,
         highlight: phase === "scanning",
@@ -263,7 +272,7 @@ export default function ProgressiveSkillsAnimation() {
         ].includes(phase),
       },
       {
-        name: "biotech.md",
+        name: "keywords.yaml",
         type: "file",
         indent: 1,
         highlight: phase === "load-template",
@@ -277,10 +286,10 @@ export default function ProgressiveSkillsAnimation() {
           "done",
         ].includes(phase),
       },
-      { name: "computer-science.md", type: "file", indent: 1 },
-      { name: "physics.md", type: "file", indent: 1 },
+      { name: "channels.md", type: "file", indent: 1 },
+      { name: "risk-rules.md", type: "file", indent: 1 },
       {
-        name: "frontend-design",
+        name: "tg-intel-crawler",
         type: "folder",
         indent: 0,
         highlight: phase === "scanning",
@@ -288,7 +297,7 @@ export default function ProgressiveSkillsAnimation() {
         done: ["building", "load-deploy", "deploying", "done"].includes(phase),
       },
       {
-        name: "SKILL.md",
+        name: "runner.py",
         type: "file",
         indent: 1,
         highlight: phase === "scanning",
@@ -296,7 +305,7 @@ export default function ProgressiveSkillsAnimation() {
         done: ["building", "load-deploy", "deploying", "done"].includes(phase),
       },
       {
-        name: "deploy",
+        name: "threat-intel-analyst",
         type: "folder",
         indent: 0,
         highlight: phase === "scanning",
@@ -312,22 +321,20 @@ export default function ProgressiveSkillsAnimation() {
         done: ["deploying", "done"].includes(phase),
       },
       {
-        name: "scripts",
-        type: "folder",
+        name: "report-template.md",
+        type: "file",
         indent: 1,
         done: ["deploying", "done"].includes(phase),
       },
       {
-        name: "deploy.sh",
+        name: "analyze.py",
         type: "file",
-        indent: 2,
+        indent: 1,
         done: ["deploying", "done"].includes(phase),
       },
     ];
     return base;
   };
-
-  const workspaceFiles = ["index.html", "index.css", "index.js"];
 
   return (
     <div
@@ -394,7 +401,7 @@ export default function ProgressiveSkillsAnimation() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            /mnt/skills/
+            /mnt/skills/grayhunt/
           </motion.div>
 
           <div className="space-y-2">
@@ -461,7 +468,7 @@ export default function ProgressiveSkillsAnimation() {
           <div className="border-b border-zinc-800 p-4">
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full bg-green-500" />
-              <span className="text-sm text-zinc-400">DeerFlow Agent</span>
+              <span className="text-sm text-zinc-400">GrayHunt Agent</span>
             </div>
           </div>
 
@@ -480,8 +487,8 @@ export default function ProgressiveSkillsAnimation() {
                 >
                   <div className="max-w-[90%] rounded-2xl rounded-tr-sm bg-blue-600 px-5 py-3">
                     <p className="text-base">
-                      Research mRNA delivery, build a landing page, deploy to
-                      Vercel
+                      Crawl major platforms, collect black/gray market
+                      intelligence, and write the analysis report
                     </p>
                   </div>
                 </motion.div>
@@ -509,11 +516,12 @@ export default function ProgressiveSkillsAnimation() {
                     "done",
                   ].includes(phase) && (
                     <div className="text-base text-zinc-300">
-                      <span className="text-purple-400">✨</span> Found 3 skills
+                      <span className="text-purple-400">*</span> Found 4
+                      intelligence skills
                     </div>
                   )}
 
-                  {/* Researching Section */}
+                  {/* Crawling Section */}
                   {[
                     "load-skill",
                     "load-template",
@@ -527,7 +535,7 @@ export default function ProgressiveSkillsAnimation() {
                     <div className="mt-4">
                       <hr className="mb-3 border-zinc-700" />
                       <div className="mb-3 text-zinc-300">
-                        🔬 Researching...
+                        Crawling multi-platform sources...
                       </div>
                       <div className="mb-3 space-y-2">
                         {/* Loading SKILL.md */}
@@ -543,7 +551,9 @@ export default function ProgressiveSkillsAnimation() {
                         ].includes(phase) && (
                           <div className="flex items-center gap-2 pl-4 text-zinc-400">
                             <FileText size={16} />
-                            <span>Loading deep-search/SKILL.md...</span>
+                            <span>
+                              Loading threat-intel-collector/SKILL.md...
+                            </span>
                           </div>
                         )}
                         {/* Loading biotech.md */}
@@ -559,8 +569,8 @@ export default function ProgressiveSkillsAnimation() {
                           <div className="flex items-center gap-2 pl-4 text-zinc-400">
                             <FileText size={16} />
                             <span>
-                              Found biotech related topic, loading
-                              deep-search/biotech.md...
+                              Matched black/gray market profile, loading
+                              threat-intel-collector/keywords.yaml...
                             </span>
                           </div>
                         )}
@@ -568,17 +578,22 @@ export default function ProgressiveSkillsAnimation() {
                       {/* Search steps */}
                       {phase === "researching" && (
                         <div className="max-h-[180px] space-y-2 overflow-hidden pl-4">
-                          {searchSteps.slice(0, searchIndex).map((step, i) => (
+                          {crawlSteps.slice(0, searchIndex).map((step, i) => (
                             <motion.div
                               key={i}
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
                               className="flex items-center gap-2 text-sm text-zinc-500"
                             >
-                              {step.type === "search" ? (
-                                <Search size={14} className="text-blue-400" />
-                              ) : (
+                              {step.type === "fetch" ? (
                                 <Globe size={14} className="text-green-400" />
+                              ) : step.type === "filter" ? (
+                                <ShieldCheck
+                                  size={14}
+                                  className="text-amber-400"
+                                />
+                              ) : (
+                                <Search size={14} className="text-blue-400" />
                               )}
                               <span className="truncate">{step.text}</span>
                             </motion.div>
@@ -593,17 +608,22 @@ export default function ProgressiveSkillsAnimation() {
                         "done",
                       ].includes(phase) && (
                         <div className="max-h-[180px] space-y-2 overflow-hidden pl-4">
-                          {searchSteps.map((step, i) => (
+                          {crawlSteps.map((step, i) => (
                             <motion.div
                               key={i}
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
                               className="flex items-center gap-2 text-sm text-zinc-500"
                             >
-                              {step.type === "search" ? (
-                                <Search size={14} className="text-blue-400" />
-                              ) : (
+                              {step.type === "fetch" ? (
                                 <Globe size={14} className="text-green-400" />
+                              ) : step.type === "filter" ? (
+                                <ShieldCheck
+                                  size={14}
+                                  className="text-amber-400"
+                                />
+                              ) : (
+                                <Search size={14} className="text-blue-400" />
                               )}
                               <span className="truncate">{step.text}</span>
                             </motion.div>
@@ -613,31 +633,37 @@ export default function ProgressiveSkillsAnimation() {
                     </div>
                   )}
 
-                  {/* Building */}
-                  {["building", "load-deploy", "deploying", "done"].includes(
-                    phase,
-                  ) && (
+                  {/* Processing */}
+                  {[
+                    "load-frontend",
+                    "building",
+                    "load-deploy",
+                    "deploying",
+                    "done",
+                  ].includes(phase) && (
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       className="mt-4"
                     >
                       <hr className="mb-3 border-zinc-700" />
-                      <div className="mb-3 text-zinc-300">🔨 Building...</div>
+                      <div className="mb-3 text-zinc-300">
+                        Collecting and normalizing data...
+                      </div>
                       <div className="mb-3 flex items-center gap-2 pl-4 text-zinc-400">
                         <FileText size={16} />
-                        <span>Loading frontend-design/SKILL.md...</span>
+                        <span>Loading tg-intel-crawler/runner.py...</span>
                       </div>
                       <div className="space-y-2 pl-4">
-                        {workspaceFiles.slice(0, buildIndex).map((file) => (
+                        {collectionFiles.slice(0, buildIndex).map((file) => (
                           <motion.div
                             key={file}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             className="flex items-center gap-2 text-sm text-green-500"
                           >
-                            <FileText size={14} />
-                            <span>Generating {file}...</span>
+                            <Database size={14} />
+                            <span>Writing {file}</span>
                             <Check size={14} />
                           </motion.div>
                         ))}
@@ -645,7 +671,7 @@ export default function ProgressiveSkillsAnimation() {
                     </motion.div>
                   )}
 
-                  {/* Deploying */}
+                  {/* Analyzing */}
                   {["load-deploy", "deploying", "done"].includes(phase) && (
                     <motion.div
                       initial={{ opacity: 0 }}
@@ -653,11 +679,13 @@ export default function ProgressiveSkillsAnimation() {
                       className="mt-4"
                     >
                       <hr className="mb-3 border-zinc-700" />
-                      <div className="mb-3 text-zinc-300">🚀 Deploying...</div>
+                      <div className="mb-3 text-zinc-300">
+                        Analyzing black/gray market intelligence...
+                      </div>
                       <div className="mb-3 space-y-2">
                         <div className="flex items-center gap-2 pl-4 text-zinc-400">
                           <FileText size={16} />
-                          <span>Loading deploy/SKILL.md...</span>
+                          <span>Loading threat-intel-analyst/SKILL.md...</span>
                         </div>
                         {["deploying", "done"].includes(phase) && (
                           <motion.div
@@ -666,7 +694,31 @@ export default function ProgressiveSkillsAnimation() {
                             className="flex items-center gap-2 pl-4 text-zinc-400"
                           >
                             <Terminal size={16} />
-                            <span>Executing scripts/deploy.sh</span>
+                            <span>Executing scripts/analyze.py</span>
+                          </motion.div>
+                        )}
+                        {["deploying", "done"].includes(phase) && (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="flex items-center gap-2 pl-4 text-zinc-400"
+                          >
+                            <Database size={16} />
+                            <span>
+                              Aggregating risk types, entities, sources, and
+                              trend lines
+                            </span>
+                          </motion.div>
+                        )}
+                        {phase === "done" && (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="flex items-center gap-2 pl-4 text-green-500"
+                          >
+                            <FileText size={16} />
+                            <span>Writing grayhunt_intel_report.md</span>
+                            <Check size={14} />
                           </motion.div>
                         )}
                       </div>
@@ -677,7 +729,11 @@ export default function ProgressiveSkillsAnimation() {
                           className="mt-4 rounded-xl border border-green-500/30 bg-green-500/10 p-4"
                         >
                           <div className="text-lg font-medium text-green-500">
-                            ✅ Live at biotech-startup.vercel.app
+                            Report written: grayhunt_intel_report.md
+                          </div>
+                          <div className="mt-1 text-sm text-green-400/80">
+                            1,284 samples, 392 entities, 47 high-risk clusters
+                            analyzed
                           </div>
                         </motion.div>
                       )}
@@ -691,7 +747,7 @@ export default function ProgressiveSkillsAnimation() {
           {/* Chat Input (decorative) */}
           <div className="border-t border-zinc-800 p-4">
             <div className="rounded-xl bg-zinc-800 px-4 py-3 text-sm text-zinc-500">
-              Ask DeerFlow anything...
+              Ask GrayHunt to crawl, analyze, or report...
             </div>
           </div>
         </div>

@@ -120,14 +120,40 @@ def _find_user_legacy(root: dict, user_id_str: str) -> dict:
     return {}
 
 
-def _extract_media_urls(legacy: dict) -> list[str]:
+def _extract_media_urls(node: dict) -> list[str]:
+    """提取推文的图片/视频封面 URL（用于多模态视觉提取）。
+
+    兼容两种结构：
+    - TikHub flat：顶层 ``media.photo[].media_url_https`` / ``media.video[].media_url_https``
+      （视频取的是封面缩略图，黑灰产引流信息常印在封面上）
+    - X GraphQL legacy：``entities.media[].media_url_https``
+    """
     urls: list[str] = []
-    media = (legacy.get("entities") or {}).get("media") or []
-    for m in media:
+
+    # TikHub flat 顶层 media
+    media_obj = node.get("media")
+    if isinstance(media_obj, dict):
+        for kind in ("photo", "video", "animated_gif"):
+            for m in media_obj.get(kind) or []:
+                u = m.get("media_url_https") or m.get("media_url")
+                if u:
+                    urls.append(u)
+
+    # GraphQL legacy entities.media
+    legacy_media = (node.get("entities") or {}).get("media") or []
+    for m in legacy_media:
         u = m.get("media_url_https") or m.get("media_url") or m.get("expanded_url")
         if u:
             urls.append(u)
-    return urls
+
+    # 去重保序
+    seen = set()
+    out = []
+    for u in urls:
+        if u not in seen:
+            seen.add(u)
+            out.append(u)
+    return out
 
 
 def _looks_like_tikhub_flat(d: dict) -> bool:

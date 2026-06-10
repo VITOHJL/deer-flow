@@ -12,12 +12,11 @@ export function SandboxSection({ className }: { className?: string }) {
   return (
     <Section
       className={className}
-      title="Agent Runtime Environment"
+      title="Crawler Runtime Environment"
       subtitle={
         <p>
-          We give DeerFlow a &quot;computer&quot;, which can execute commands,
-          manage files, and run long tasks — all in a secure Docker-based
-          sandbox
+          GrayHunt runs crawlers, parsers, and analyzers inside an isolated
+          workspace built for long-running intelligence jobs.
         </p>
       }
     >
@@ -25,45 +24,44 @@ export function SandboxSection({ className }: { className?: string }) {
         {/* Left: Terminal */}
         <div className="w-full flex-1">
           <Terminal className="h-[360px] w-full">
-            {/* Scene 1: Build a Game */}
-            <TypingAnimation>$ cat requirements.txt</TypingAnimation>
+            {/* Scene 1: Crawl sources */}
+            <TypingAnimation>$ grayhunt crawl --platform xhs</TypingAnimation>
             <AnimatedSpan delay={800} className="text-zinc-400">
-              pygame==2.5.0
+              Loaded 18 seed keywords and 42 watch targets
             </AnimatedSpan>
 
             <TypingAnimation delay={1200}>
-              $ pip install -r requirements.txt
+              $ grayhunt crawl --platform telegram
             </TypingAnimation>
             <AnimatedSpan delay={2000} className="text-green-500">
-              ✔ Installed pygame
+              ✔ 1,284 raw samples collected
             </AnimatedSpan>
 
             <TypingAnimation delay={2400}>
-              $ write game.py --lines 156
+              $ grayhunt extract --entities
             </TypingAnimation>
             <AnimatedSpan delay={3200} className="text-blue-500">
-              ✔ Written 156 lines
+              ✔ 392 accounts, links, domains, and contacts extracted
             </AnimatedSpan>
 
             <TypingAnimation delay={3600}>
-              $ python game.py --test
+              $ grayhunt analyze --risk black-gray
             </TypingAnimation>
             <AnimatedSpan delay={4200} className="text-green-500">
-              ✔ All sprites loaded
+              ✔ 47 high-risk clusters identified
             </AnimatedSpan>
             <AnimatedSpan delay={4500} className="text-green-500">
-              ✔ Physics engine OK
+              ✔ Cross-platform duplicate evidence merged
             </AnimatedSpan>
             <AnimatedSpan delay={4800} className="text-green-500">
-              ✔ 60 FPS stable
+              ✔ Report ready: grayhunt_intel_report.md
             </AnimatedSpan>
 
-            {/* Scene 2: Data Analysis */}
             <TypingAnimation delay={5400}>
-              $ curl -O sales-2024.csv
+              $ sqlite3 risk_evidence.sqlite &quot;.tables&quot;
             </TypingAnimation>
             <AnimatedSpan delay={6200} className="text-zinc-400">
-              Downloaded 12.4 MB
+              samples entities clusters trends reports
             </AnimatedSpan>
           </Terminal>
         </div>
@@ -72,7 +70,7 @@ export function SandboxSection({ className }: { className?: string }) {
         <div className="w-full flex-1 space-y-6">
           <div className="space-y-4">
             <p className="text-sm font-medium tracking-wider text-purple-400 uppercase">
-              Open-source
+              Isolated analysis
             </p>
             <h2 className="text-4xl font-bold tracking-tight lg:text-5xl">
               <a
@@ -87,7 +85,7 @@ export function SandboxSection({ className }: { className?: string }) {
 
           <div className="space-y-4 text-lg text-zinc-400">
             <p>
-              We recommend using{" "}
+              GrayHunt can run inside{" "}
               <a
                 href="https://github.com/agent-infra/sandbox"
                 className="underline"
@@ -96,8 +94,8 @@ export function SandboxSection({ className }: { className?: string }) {
               >
                 All-in-One Sandbox
               </a>{" "}
-              that combines Browser, Shell, File, MCP and VSCode Server in a
-              single Docker container.
+              with browser automation, shell execution, file storage, and MCP
+              integrations in a single Docker container.
             </p>
           </div>
 

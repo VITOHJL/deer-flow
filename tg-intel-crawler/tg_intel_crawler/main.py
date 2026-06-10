@@ -274,6 +274,26 @@ async def _crawl_async(
             await client.run_until_disconnected()
 
 
+def _normalize_group_url(group: str) -> str:
+    """Normalize a crawl target into a clickable Telegram group URL.
+
+    - Already a https://t.me/... link → returned as-is.
+    - Bare username or @username → https://t.me/<username>.
+    - Numeric chat_id (private group) → https://t.me/c/<id>.
+    - Empty/unknown → "".
+    """
+    if not group:
+        return ""
+    g = str(group).strip()
+    if g.startswith("http://") or g.startswith("https://"):
+        return g
+    if g.startswith("@"):
+        return f"https://t.me/{g[1:]}"
+    if g.lstrip("-").isdigit():
+        return f"https://t.me/c/{g.lstrip('-')}"
+    return f"https://t.me/{g}"
+
+
 async def _crawl_one_group(
     group: str,
     *,
@@ -347,6 +367,8 @@ async def _crawl_one_group(
             return stats
 
     records: list[IntelRecord] = []
+    # group 参数即群链接来源：若是 https://t.me/... 直接用；否则按 username 兜底构建。
+    group_url = _normalize_group_url(group)
     for msg, result in zip(filtered_messages, results):
         if result.is_relevant:
             records.append(IntelRecord(
@@ -362,6 +384,8 @@ async def _crawl_one_group(
                 entities=result.entities,
                 summary=result.summary,
                 llm_model=config["llm"]["model"],
+                source_platform="telegram",
+                source_group_url=group_url,
             ))
 
     exporter.export_filtered(records)
@@ -854,7 +878,12 @@ async def _probe_bot_lookup_async(
     type=click.Choice(["Latest", "Top"]),
     help="Search type (default: from config)",
 )
-def crawl_twitter(keywords: str, users: str, days: int, max_pages, search_type):
+@click.option(
+    "--vision/--no-vision",
+    default=True,
+    help="对带图/视频封面的推文做多模态视觉提取（识别图中文字/账号/二维码）。默认开启。",
+)
+def crawl_twitter(keywords: str, users: str, days: int, max_pages, search_type, vision):
     """Crawl Twitter/X for ByteDance-related black/gray industry intel via tikhub.io."""
     asyncio.run(
         _crawl_twitter_async(
@@ -863,6 +892,7 @@ def crawl_twitter(keywords: str, users: str, days: int, max_pages, search_type):
             days=days,
             max_pages_override=max_pages,
             search_type_override=search_type,
+            vision=vision,
         )
     )
 
@@ -873,6 +903,7 @@ async def _crawl_twitter_async(
     days: int,
     max_pages_override,
     search_type_override,
+    vision: bool = True,
 ):
     logger = logging.getLogger("tg_crawler")
     config = load_config()
@@ -975,15 +1006,32 @@ async def _crawl_twitter_async(
     if not filtered_tweets:
         return
 
-    # LLM analysis
+    # 多模态视觉提取：对带图/视频封面的推文，先用 LLM 视觉识别图中文字/账号/二维码，
+    # 把识别结果并入文本一起送分析（图里的引流信息也会被抽进 entities）。
+    ocr_by_tweet: dict[str, str] = {}
+    if vision and filtered_tweets:
+        media_tweets = [t for t in filtered_tweets if t.media_urls]
+        if media_tweets:
+            logger.info(f"👁️  视觉提取 {len(media_tweets)} 条带图推文...")
+            for t in media_tweets:
+                ocr = await llm_filter.extract_from_images(t.media_urls)
+                if ocr:
+                    ocr_by_tweet[t.tweet_id] = ocr
+            logger.info(f"👁️  视觉提取完成：{len(ocr_by_tweet)} 条有图中信息")
+
+    # LLM analysis（文本 + 图中提取信息）
     logger.info(f"🤖 LLM analyzing {len(filtered_tweets)} tweets...")
-    texts = [t.text for t in filtered_tweets]
+    texts = []
+    for t in filtered_tweets:
+        ocr = ocr_by_tweet.get(t.tweet_id, "")
+        texts.append(f"{t.text}\n【图片中的信息】{ocr}" if ocr else t.text)
     results = await llm_filter.analyze(texts)
 
     records: list[IntelRecord] = []
     for tweet, result in zip(filtered_tweets, results):
         if not result.is_relevant:
             continue
+        ocr = ocr_by_tweet.get(tweet.tweet_id, "")
         records.append(
             IntelRecord(
                 id=f"tweet_{tweet.tweet_id}",
@@ -1000,6 +1048,13 @@ async def _crawl_twitter_async(
                 llm_model=config["llm"]["model"],
                 source_platform="twitter",
                 source_url=tweet.url,
+                media_urls=tweet.media_urls,
+                media_ocr_text=ocr,
+                source_group_url=(
+                    f"https://twitter.com/{tweet.screen_name}"
+                    if tweet.screen_name
+                    else tweet.url
+                ),
             )
         )
 
@@ -1012,6 +1067,48 @@ async def _crawl_twitter_async(
         f"✅ Done. Saved {len(records)} relevant tweets "
         f"(high={high}, medium={med}, low={low}) to ./output/filtered/"
     )
+
+
+@cli.command(name="report-html")
+@click.option("--output", "output", default=None,
+              help="HTML 输出路径（默认 output/reports/intel.html）")
+@click.option("--extra-db", "extra_dbs", multiple=True,
+              help="额外合并的情报库路径（可多次指定，用于跨项目/多源汇总，如另一个 intel.db）")
+@click.option("--embed-images", is_flag=True, default=False,
+              help="把图片下载内嵌为 base64，生成完全离线自包含的 HTML（适合做项目首页静态展示）")
+@click.option("--open", "open_browser", is_flag=True, default=False,
+              help="生成后用默认浏览器打开")
+def report_html(output, extra_dbs, embed_images, open_browser):
+    """生成情报可视化 HTML 页面（按来源群组聚合，群链接可点击）。
+
+    默认读取本项目 intel.db 的所有 *_intel_filtered 表（telegram/twitter/bot 等）；
+    用 --extra-db 可合并其它库（例如包含 Telegram 情报的另一个项目库）。
+    无需 LLM、不联网。
+    """
+    from tg_intel_crawler.storage.html_reporter import HtmlReporter
+
+    config = load_config()
+    out_dir = Path(config["output"]["dir"])
+    db_path = out_dir / "intel.db"
+
+    db_paths = [str(db_path)] + list(extra_dbs)
+    existing = [p for p in db_paths if Path(p).exists()]
+    if not existing:
+        click.echo(f"❌ 找不到任何情报库（已尝试：{', '.join(db_paths)}）")
+        return
+
+    out_path = output or str(out_dir / "reports" / "intel.html")
+    click.echo(f"🎨 生成可视化页面：合并 {len(existing)} 个库 → {out_path} ...")
+    for p in existing:
+        click.echo(f"   • {p}")
+    if embed_images:
+        click.echo("   （内嵌图片为 base64，离线自包含，下载图片需稍候…）")
+    result = HtmlReporter(existing).render(out_path, embed_images=embed_images)
+    click.echo(f"✅ 已生成：{result}")
+    if open_browser:
+        import webbrowser
+
+        webbrowser.open(f"file://{result}")
 
 
 @cli.command(name="migrate-json")

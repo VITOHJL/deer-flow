@@ -30,6 +30,9 @@ class IntelRecord:
     llm_model: str = ""
     source_platform: str = "telegram"  # "telegram" | "twitter"
     source_url: str = ""
+    source_group_url: str = ""  # 来源群/账号的可点击链接（Telegram 群链接 / Twitter 主页等）
+    media_urls: list = field(default_factory=list)  # 图片/视频封面 URL
+    media_ocr_text: str = ""  # 多模态从图片/视频封面提取的文字与引流信息
 
 
 class Exporter:
@@ -140,15 +143,17 @@ class Exporter:
         filepath = self._output_dir / "filtered" / f"intel{suffix}_{date_str}.csv"
 
         fieldnames = [
-            "id", "source_platform", "source_group", "date",
+            "id", "source_platform", "source_group", "source_group_url", "date",
             "sender_id", "sender_name", "sender_username",
             "original_text", "risk_type", "risk_level",
-            "entities", "summary", "llm_model", "source_url",
+            "entities", "summary", "llm_model", "source_url", "media_ocr_text",
         ]
 
         file_exists = filepath.exists()
         with open(filepath, "a", encoding="utf-8-sig", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames, quoting=csv.QUOTE_ALL)
+            writer = csv.DictWriter(
+                f, fieldnames=fieldnames, quoting=csv.QUOTE_ALL, extrasaction="ignore"
+            )
             if not file_exists:
                 writer.writeheader()
             for record in records:
@@ -157,6 +162,7 @@ class Exporter:
                 row["entities"] = json.dumps(row["entities"], ensure_ascii=False)
                 # 保留原始文本完整性：将换行替换为空格避免CSV断行
                 row["original_text"] = row["original_text"].replace("\n", " ").replace("\r", "")
+                row["media_ocr_text"] = (row.get("media_ocr_text") or "").replace("\n", " ").replace("\r", "")
                 writer.writerow(row)
 
     def export_raw(
